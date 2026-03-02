@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MoveNet Pose Detection</title>
+    <style>
+        body { text-align: center; font-family: Arial; background: #111; color: white; }
+        video { border: 3px solid #00ff99; border-radius: 10px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<h1>MoveNet Pose Detection</h1>
+
+<button onclick="startCamera()">OK - Start Recording</button>
+<button onclick="stopCamera()">Stop (or press Q)</button>
+
+<br><br>
+
+<video id="video" width="500" autoplay></video>
+
+<script>
+let video = document.getElementById("video");
+let stream;
+let interval;
+
+async function startCamera() {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+
+    interval = setInterval(sendFrame, 500);
+}
+
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    clearInterval(interval);
+}
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "q") {
+        stopCamera();
+    }
+});
+
+async function sendFrame() {
+    let canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    let ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    let blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg"));
+
+    let formData = new FormData();
+    formData.append("file", blob);
+
+    await fetch("/predict", {
+        method: "POST",
+        body: formData
+    });
+}
+</script>
+
+</body>
+</html>
